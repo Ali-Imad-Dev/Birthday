@@ -249,44 +249,7 @@
       font-weight: 700;
       font-size: 18px;
       box-shadow: 0 8px 30px rgba(255, 60, 110, .5), inset 0 1px 0 rgba(255, 255, 255, .4);
-      animation: pulse 1.6s ease-in-out infinite;
-      transition: all .35s ease;
-    }
-
-    .open-btn.loading,
-    .open-btn[disabled] {
-      background: linear-gradient(135deg, #9b1937, #5c0717);
-      animation: pulseLoading 1.8s ease-in-out infinite;
-      box-shadow: 0 4px 18px rgba(0, 0, 0, .4);
-      cursor: wait;
-      opacity: .92;
-      pointer-events: none;
-    }
-
-    @keyframes pulseLoading {
-      0%, 100% { transform: scale(1); opacity: .88; }
-      50% { transform: scale(1.02); opacity: 1; }
-    }
-
-    .music-load-notice {
-      margin-top: 10px;
-      font-family: var(--ar2);
-      font-size: 13px;
-      color: #fde4d6;
-      opacity: .85;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      transition: opacity .5s ease, transform .5s ease;
-    }
-
-    .music-load-notice.done {
-      opacity: 0;
-      transform: translateY(6px);
-      pointer-events: none;
-      visibility: hidden;
-      display: none;
+      animation: pulse 1.6s ease-in-out infinite
     }
 
     @keyframes pulse {
@@ -2241,8 +2204,7 @@
       <div class="intro-author" data-t="introAuthor">Made by your man - Ali</div>
       <small data-t="introSubtitle">Happy Birthday</small>
       <h1 data-t="name">حور</h1>
-      <button class="open-btn loading" id="openBtn" data-t="openBtn" disabled>⏳ جاري تحضير هديتكِ الموسيقية...</button>
-      <div id="musicNotice" class="music-load-notice">🎵 نجهّز الموسيقى لتبدأ مع هديتج فوراً...</div>
+      <button class="open-btn" id="openBtn" data-t="openBtn">افتحي هديتج من علي</button>
     </div>
   </section>
 
@@ -2668,10 +2630,7 @@
     function applyContent() {
       const C = CONFIG;
       document.title = 'Happy Birthday ' + C.name;
-      $$('[data-t]').forEach(e => {
-        if (e.id === 'openBtn' && typeof Music !== 'undefined' && !Music.isReady) return;
-        e.textContent = C[e.dataset.t] ?? '';
-      });
+      $$('[data-t]').forEach(e => { e.textContent = C[e.dataset.t] ?? ''; });
       $('#miniTitle').textContent = C.letterTitle;
       $('#miniText').textContent = C.letter;
       $('#letterTitle').textContent = C.letterTitle;
@@ -2835,61 +2794,10 @@
     })();
 
     const Music = {
-      audio: new Audio(), mode: 'synth', playing: false, wanted: true, isReady: false, loadCallbacks: [],
+      audio: new Audio(), mode: 'synth', playing: false, wanted: true,
       init() {
-        this.audio.loop = true;
-        this.audio.preload = 'auto';
-
-        const markReady = () => {
-          if (!this.isReady) {
-            this.isReady = true;
-            while (this.loadCallbacks.length) {
-              const cb = this.loadCallbacks.shift();
-              try { cb && cb(); } catch (e) {}
-            }
-            this.onReady();
-          }
-        };
-
-        this.audio.addEventListener('canplaythrough', markReady);
-        this.audio.addEventListener('canplay', markReady);
-        this.audio.addEventListener('loadeddata', markReady);
-
-        this.audio.addEventListener('error', () => {
-          if (this.mode === 'file' && this.audio.getAttribute('src')) {
-            this.mode = 'synth';
-            markReady();
-            if (this.wanted && this.playing) { this.playing = false; this.play(); }
-          }
-        });
-
-        // Safety fallback: in case of slow connection or strict autoplay policies, unlock after 6s
-        setTimeout(markReady, 6000);
-      },
-      waitForLoad() {
-        if (this.isReady || this.mode === 'synth' || this.audio.readyState >= 3) {
-          this.isReady = true;
-          return Promise.resolve();
-        }
-        return new Promise(resolve => {
-          this.loadCallbacks.push(resolve);
-          setTimeout(() => {
-            this.isReady = true;
-            resolve();
-          }, 4500);
-        });
-      },
-      onReady() {
-        const btn = $('#openBtn');
-        const notice = $('#musicNotice');
-        if (btn) {
-          btn.classList.remove('loading');
-          btn.removeAttribute('disabled');
-          btn.textContent = (typeof CONFIG !== 'undefined' && CONFIG.openBtn) ? CONFIG.openBtn : 'افتحي هديتج من علي 💝';
-        }
-        if (notice) {
-          notice.classList.add('done');
-        }
+        this.audio.loop = true; this.audio.preload = 'auto';
+        this.audio.addEventListener('error', () => { if (this.mode === 'file' && this.audio.getAttribute('src')) { this.mode = 'synth'; if (this.wanted && this.playing) { this.playing = false; this.play(); } } });
       },
       async play() {
         this.wanted = true;
@@ -2904,30 +2812,7 @@
       setSource(url) {
         const was = this.playing;
         this.audio.pause(); Synth.pause(); this.playing = false;
-        if (url) {
-          this.audio.src = url;
-          this.mode = 'file';
-          if (this.audio.readyState >= 3) {
-            this.isReady = true;
-            this.onReady();
-          } else {
-            this.isReady = false;
-            const btn = $('#openBtn');
-            const notice = $('#musicNotice');
-            if (btn && current === 'intro') {
-              btn.classList.add('loading');
-              btn.setAttribute('disabled', 'true');
-              btn.textContent = '⏳ جاري تحضير هديتكِ الموسيقية...';
-            }
-            if (notice) notice.classList.remove('done');
-            this.audio.load();
-          }
-        } else {
-          this.audio.removeAttribute('src');
-          this.mode = 'synth';
-          this.isReady = true;
-          this.onReady();
-        }
+        if (url) { this.audio.src = url; this.mode = 'file'; } else { this.audio.removeAttribute('src'); this.mode = 'synth'; }
         if (was) this.play();
       },
       pause() { this.wanted = false; this.playing = false; this.mode === 'file' ? this.audio.pause() : Synth.pause(); this.ui(); },
@@ -3094,13 +2979,8 @@
       });
     }
 
-    $('#openBtn').addEventListener('click', async e => {
-      e.stopPropagation();
-      if (!Music.isReady) {
-        $('#openBtn').textContent = '⏳ ثواني وتكتمل الموسيقى...';
-        await Music.waitForLoad();
-      }
-      Music.play();
+    $('#openBtn').addEventListener('click', e => {
+      e.stopPropagation(); Music.play();
       TG.send('💝 ضغطت على زر "افتحي هديتج" ودخلت للموقع!');
       $('#intro').classList.add('leaving'); petalShower(80);
       setTimeout(() => { go('hero'); $('#musicBtn').classList.add('show'); }, 900);
